@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import packageJson from '../../package.json';
+
+// Importe a versão diretamente do package.json
+const appVersion = packageJson.version;
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,7 +46,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             isMenuOpen ? 'translate-x-0 w-[70%]' : '-translate-x-full'
           } md:translate-x-0 md:flex md:flex-col md:w-[30%]`}
         >
-          <nav className="h-screen overflow-auto">
+          <nav className="h-screen overflow-auto flex flex-col"> {/* Adicionei flex e flex-col aqui */}
             <Link
               to="/parcelas"
               className={`block py-6 px-4 text-xl ${location.pathname === '/parcelas' ? 'bg-gray-700' : ''}`}
@@ -64,6 +68,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             >
               Logout
             </button>
+            {/* Rodapé com a versão */}
+            <div className="mt-auto py-2 px-4 text-xs text-gray-400 text-center">
+              Versão {appVersion}
+            </div>
           </nav>
         </div>
       )}

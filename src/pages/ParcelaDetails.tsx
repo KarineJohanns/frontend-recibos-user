@@ -1,22 +1,21 @@
-// src/pages/ParcelaDetails.tsx
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom"; // Importar useNavigate para navegação
-import { getParcelasData, downloadRecibo  } from "../api"; // Importar patchEstornar
+import { useParams } from "react-router-dom";
+import { getParcelasData, downloadRecibo } from "../api";
+import Loading from "../components/Loading";
 
 const ParcelaDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>(); // Obtém o id da URL
+  const { id } = useParams<{ id: string }>();
 
   const [parcela, setParcela] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<boolean>(false); // Novo estado para controle de download
 
   useEffect(() => {
     const fetchParcela = async () => {
       try {
         const response = await getParcelasData();
-        
         const parcela = response.find((p: any) => p.parcelaId === Number(id));
-        console.log("Dados recebidos do backend:", parcela);
         if (parcela) {
           setParcela(parcela);
         } else {
@@ -32,11 +31,12 @@ const ParcelaDetails: React.FC = () => {
     fetchParcela();
   }, [id]);
 
-  if (loading) return <p>Carregando...</p>;
-  if (error) return <p>{error}</p>;
+  if (loading || error) {
+    return <Loading loading={loading} error={error} />;
+  }
+
   if (!parcela) return <p>Parcela não encontrada.</p>;
 
-  // Formatadores de data e valores
   const formatarValor = (valor: number): string => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -54,26 +54,27 @@ const ParcelaDetails: React.FC = () => {
 
   const handleBaixarRecibo = async (uri: string): Promise<void> => {
     try {
-      // Remover a parte inicial da URI (http://localhost:8080/api/files/)
-      const filePath = uri.split("download/")[1]; // Isso irá obter apenas o trecho após "download/"
-      
-      // Caso o caminho não exista, lançar um erro
+      setDownloading(true); // Inicia o carregamento
+      const filePath = uri.split("download/")[1];
+
       if (!filePath) {
         throw new Error("Caminho do recibo inválido");
       }
-  
-      const blob = await downloadRecibo(filePath); // Chama a função de download com o caminho correto
+
+      const blob = await downloadRecibo(filePath);
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `recibo_${filePath}`; // Nome do arquivo
+      a.download = `recibo_${filePath}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url); // Libera a URL após o download
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Erro ao gerar recibo:", error);
       alert("Erro ao baixar o recibo.");
+    } finally {
+      setDownloading(false); // Finaliza o carregamento
     }
   };
 
@@ -153,22 +154,28 @@ const ParcelaDetails: React.FC = () => {
       </div>
 
       <div className="flex justify-between mt-4">
-      {parcela.paga ? (
-  <button
-    className={`bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 ${
-      !parcela.recibo || !parcela.recibo.uri ? 'opacity-50 cursor-not-allowed' : ''
-    }`}
-    onClick={() => {
-      if (parcela.recibo && parcela.recibo.uri) {
-        handleBaixarRecibo(parcela.recibo.uri); // Usando parcelaId como solicitado
-      }
-    }}
-    disabled={!parcela.recibo || !parcela.recibo.uri} // Desabilita o botão se não houver URI
-  >
-    Baixar Recibo
-  </button>
-) : null}
-</div>
+        {parcela.paga ? (
+          downloading ? ( // Mostra o spinner enquanto o recibo está sendo baixado
+            <Loading loading={true} />
+          ) : (
+            <button
+              className={`bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 ${
+                !parcela.recibo || !parcela.recibo.uri
+                  ? 'opacity-50 cursor-not-allowed'
+                  : ''
+              }`}
+              onClick={() => {
+                if (parcela.recibo && parcela.recibo.uri) {
+                  handleBaixarRecibo(parcela.recibo.uri);
+                }
+              }}
+              disabled={!parcela.recibo || !parcela.recibo.uri}
+            >
+              Baixar Recibo
+            </button>
+          )
+        ) : null}
+      </div>
     </div>
   );
 };

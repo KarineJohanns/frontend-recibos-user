@@ -1,6 +1,6 @@
 // src/pages/Parcelas.tsx
 import React, { useEffect, useState } from "react";
-import { getParcelasData } from "../api";
+import { useParcelas } from "../ParcelaContext"; // Importa o Contexto
 import Loading from "../components/Loading";
 import positivo from "../assets/positivo.gif";
 import { Link } from "react-router-dom";
@@ -36,28 +36,13 @@ interface Parcela {
 }
 
 const Parcelas: React.FC = () => {
-  const [parcelas, setParcelas] = useState<Parcela[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { parcelas, loading, error, fetchParcelas } = useParcelas(); // Pega o estado e a função de busca do Contexto
   const [filter, setFilter] = useState<string>("todas");
 
   useEffect(() => {
-    const fetchParcelas = async () => {
-      try {
-        const response = await getParcelasData();
-        if (Array.isArray(response)) {
-          setParcelas(response);
-        } else {
-          console.error("Resposta do servidor não é um array:", response);
-          setParcelas([]); // Define um array vazio em caso de erro
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    // Chama o fetchParcelas quando o componente é montado
     fetchParcelas();
-  }, []);
+  }, [fetchParcelas]);
 
   // Obter data atual e zerar horas
   const dataAtual = new Date();
@@ -88,20 +73,23 @@ const Parcelas: React.FC = () => {
   };
 
   const filteredParcelas = parcelas
-    .filter((parcela) => {
-      const dataVencimento = new Date(parcela.dataVencimento);
-      dataVencimento.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas as datas
+  .filter((parcela) => {
+    const dataVencimento = new Date(parcela.dataVencimento);
+    dataVencimento.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas as datas
 
-      // Filtros
-      if (filter === "pagas") return parcela.paga; // Apenas parcelas pagas
-      if (filter === "pendentes") return !parcela.paga && dataVencimento >= dataAtual; // Apenas pendentes que não estão atrasadas
-      if (filter === "atrasadas") return !parcela.paga && dataVencimento < dataAtual; // Apenas atrasadas
-      if (filter === "venceHoje") return !parcela.paga && dataVencimento.getTime() === dataAtual.getTime(); // Apenas as que vencem hoje
+    // Filtros
+    if (filter === "pagas") return parcela.paga; // Apenas parcelas pagas
+    if (filter === "pendentes") return !parcela.paga && dataVencimento >= dataAtual; // Apenas pendentes que não estão atrasadas
+    if (filter === "atrasadas") return !parcela.paga && dataVencimento < dataAtual; // Apenas atrasadas
+    if (filter === "venceHoje") return !parcela.paga && dataVencimento.getTime() === dataAtual.getTime(); // Apenas as que vencem hoje
 
-      return true; // Todas
-    })
-    .sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime());
-
+    return true; // Todas
+  })
+  .sort(
+    (a, b) =>
+      new Date(a.dataVencimento).getTime() -
+      new Date(b.dataVencimento).getTime()
+  );
   //Formatadores de data e valores
   const formatarValor = (valor: number): string => {
     return new Intl.NumberFormat("pt-BR", {
